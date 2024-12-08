@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <form id="sendNotification">
+        <input type="text" name="title" placeholder="Заголовок" required>
+        <input type="text" name="message" placeholder="Повідомлення" required>
+        <button type="submit">Надіслати</button>
+      </form>
+      
+      <script>
+        document.getElementById('sendNotification').addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const formData = new FormData(event.target);
+          const data = {
+            title: formData.get('title'),
+            message: formData.get('message')
+          };
+          try {
+            const response = await fetch('/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            alert(result.message || 'Повідомлення надіслано!');
+          } catch (error) {
+            console.error('Помилка:', error);
+          }
+        });
+      </script>
+      
+</body>
+</html>
