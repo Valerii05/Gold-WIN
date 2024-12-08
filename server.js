@@ -7,7 +7,7 @@ const cors = require('cors');
 app.use(cors());
 
 app.use(cors({
-  origin: ['https://subtle-sfogliatella-8570dc.netlify.app/', 'http://localhost:3000'],
+  origin: ['https://subtle-sfogliatella-8570dc.netlify.app/', 'https://gold-win-oqm1.onrender.com'],
   methods: ['GET', 'POST']
 }));
 
