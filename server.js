@@ -23,7 +23,7 @@ webpush.setVapidDetails(
   privateVapidKey
 );
 
-const subscribersFilePath = path.join(__dirname, 'subscribers.json');
+const subscribersFilePath = path.join(__dirname, 'data', 'subscribers.json');
 
 function readSubscribers() {
   try {
