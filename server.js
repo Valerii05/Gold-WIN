@@ -79,19 +79,20 @@ app.post('/subscribe', (req, res) => {
 
 // Ендпоінт для відправки push-повідомлень
 app.post('/send', (req, res) => {
+  console.log('Request body:', req.body); // Логування тіла запиту
+
   const { title, message } = req.body;
 
-  // Перевіряємо, чи є заголовок і повідомлення в запиті
   if (!title || !message) {
     return res.status(400).json({ error: 'Необхідні заголовок і повідомлення' });
   }
 
   const payload = JSON.stringify({ title, message });
 
-  // Зчитуємо підписки з файлу
+  // Логування підписок
   const subscriptions = readSubscribers();
+  console.log('Subscriptions:', subscriptions);
 
-  // Відправляємо повідомлення всім підписникам
   Promise.all(subscriptions.map(subscription =>
     webpush.sendNotification(subscription, payload)
   ))
@@ -103,6 +104,7 @@ app.post('/send', (req, res) => {
     console.error(err);
   });
 });
+
 
 // Запуск сервера
 app.listen(port, () => {
