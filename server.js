@@ -16,6 +16,9 @@ app.use(cors({
 
 app.use(express.static('public'));
 
+// Додано для обробки JSON запитів
+app.use(express.json());  // <-- Тут додано!
+
 // Твої публічні та приватні VAPID ключі
 const publicVapidKey = 'BPsBKO50Wxlv65vzAR9BJ1Rj1cv-VYCWeXUlS-ATxZartqVmATC4Z6lRw6F3IlYSfo7sQXV-QAvhkZCtVoLZHuc';
 const privateVapidKey = '1_2JG8-VGXWS08TjiHMf8mJnJOku7F8hb9oyRZaUXbg';
@@ -104,7 +107,6 @@ app.post('/send', (req, res) => {
     console.error(err);
   });
 });
-
 
 // Запуск сервера
 app.listen(port, () => {
