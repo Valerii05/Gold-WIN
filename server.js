@@ -20,7 +20,7 @@ const privateVapidKey = '1_2JG8-VGXWS08TjiHMf8mJnJOku7F8hb9oyRZaUXbg';
 
 // Налаштування для web-push
 webpush.setVapidDetails(
-  'mailto:valerii.footbolis@gmail.com', // Твоя електронна пошта
+  'mailto:valerii.bondarenko3007@gmail.com', 
   publicVapidKey,
   privateVapidKey
 );
