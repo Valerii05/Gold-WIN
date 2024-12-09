@@ -8,6 +8,35 @@ const port = 3000;
 const cors = require('cors');
 app.use(cors());
 
+const sqlite3 = require('sqlite3').verbose();
+
+// Підключення до бази даних (створюється файл subscribers.db, якщо його немає)
+const db = new sqlite3.Database('./subscribers.db', (err) => {
+  if (err) {
+    console.error('Помилка підключення до бази даних:', err.message);
+  } else {
+    console.log('Підключено до SQLite бази даних.');
+  }
+});
+
+// Створення таблиці, якщо її ще немає
+db.run(`
+  CREATE TABLE IF NOT EXISTS subscribers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint TEXT UNIQUE NOT NULL,
+    keys TEXT NOT NULL
+  )
+`, (err) => {
+  if (err) {
+    console.error('Помилка при створенні таблиці:', err.message);
+  } else {
+    console.log('Таблиця subscribers готова.');
+  }
+});
+
+
+
+
 // Додаємо дозволені домени
 app.use(cors({
   origin: ['https://subtle-sfogliatella-8570dc.netlify.app/', 'https://gold-win-oqm1.onrender.com'],
@@ -58,27 +87,27 @@ app.post('/subscribe', (req, res) => {
     return res.status(400).json({ error: 'Невірна підписка' });
   }
 
-  // Зчитуємо підписки з файлу
-  let subscriptions = readSubscribers();
+  // Підготовка даних для запису
+  const endpoint = subscription.endpoint;
+  const keys = JSON.stringify(subscription.keys); // Зберігаємо ключі як текст
 
-  // Перевірка, чи вже є ця підписка
-  const isAlreadySubscribed = subscriptions.some(sub => sub.endpoint === subscription.endpoint);
+  // Додаємо підписку до бази даних
+  db.run(`
+    INSERT INTO subscribers (endpoint, keys) VALUES (?, ?)
+  `, [endpoint, keys], (err) => {
+    if (err) {
+      if (err.message.includes('UNIQUE')) {
+        return res.status(200).json({ message: 'Цей пристрій вже підписаний.' });
+      }
+      console.error('Помилка при додаванні підписки:', err.message);
+      return res.status(500).json({ error: 'Помилка сервера.' });
+    }
 
-  if (isAlreadySubscribed) {
-    return res.status(200).json({ message: 'Цей пристрій вже підписаний.' });
-  }
-
-  // Додаємо підписку в масив
-  subscriptions.push(subscription);
-
-  // Зберігаємо оновлений масив підписок в файл
-  saveSubscribers(subscriptions);
-
-  console.log('Нова підписка:', subscription);
-
-  // Відповідаємо клієнту, що підписка успішно додана
-  res.status(201).json({ message: 'Підписка успішно додана!' });
+    console.log('Нова підписка:', subscription);
+    res.status(201).json({ message: 'Підписка успішно додана!' });
+  });
 });
+
 
 // Ендпоінт для відправки push-повідомлень
 app.post('/send', (req, res) => {
