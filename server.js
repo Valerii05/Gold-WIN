@@ -8,34 +8,21 @@ const port = 3000;
 const cors = require('cors');
 app.use(cors());
 
-const sqlite3 = require('sqlite3').verbose();
+// Підключення до better-sqlite3
+const Database = require('better-sqlite3');
 
 // Підключення до бази даних (створюється файл subscribers.db, якщо його немає)
-const db = new sqlite3.Database('./subscribers.db', (err) => {
-  if (err) {
-    console.error('Помилка підключення до бази даних:', err.message);
-  } else {
-    console.log('Підключено до SQLite бази даних.');
-  }
-});
+const db = new Database('./subscribers.db', { verbose: console.log });
 
 // Створення таблиці, якщо її ще немає
-db.run(`
+const createTableStmt = db.prepare(`
   CREATE TABLE IF NOT EXISTS subscribers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     endpoint TEXT UNIQUE NOT NULL,
     keys TEXT NOT NULL
   )
-`, (err) => {
-  if (err) {
-    console.error('Помилка при створенні таблиці:', err.message);
-  } else {
-    console.log('Таблиця subscribers готова.');
-  }
-});
-
-
-
+`);
+createTableStmt.run();
 
 // Додаємо дозволені домени
 app.use(cors({
@@ -92,22 +79,21 @@ app.post('/subscribe', (req, res) => {
   const keys = JSON.stringify(subscription.keys); // Зберігаємо ключі як текст
 
   // Додаємо підписку до бази даних
-  db.run(`
+  const stmt = db.prepare(`
     INSERT INTO subscribers (endpoint, keys) VALUES (?, ?)
-  `, [endpoint, keys], (err) => {
-    if (err) {
-      if (err.message.includes('UNIQUE')) {
-        return res.status(200).json({ message: 'Цей пристрій вже підписаний.' });
-      }
-      console.error('Помилка при додаванні підписки:', err.message);
-      return res.status(500).json({ error: 'Помилка сервера.' });
-    }
-
+  `);
+  try {
+    stmt.run(endpoint, keys);
     console.log('Нова підписка:', subscription);
     res.status(201).json({ message: 'Підписка успішно додана!' });
-  });
+  } catch (err) {
+    if (err.message.includes('UNIQUE')) {
+      return res.status(200).json({ message: 'Цей пристрій вже підписаний.' });
+    }
+    console.error('Помилка при додаванні підписки:', err.message);
+    res.status(500).json({ error: 'Помилка сервера.' });
+  }
 });
-
 
 // Ендпоінт для відправки push-повідомлень
 app.post('/send', (req, res) => {
