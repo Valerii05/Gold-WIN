@@ -1,16 +1,18 @@
 const express = require('express');
 const webpush = require('web-push');
 const bodyParser = require('body-parser');
+const fs = require('fs');
+const path = require('path');
 const app = express();
 const port = 3000;
 const cors = require('cors');
 app.use(cors());
 
+// Додаємо дозволені домени
 app.use(cors({
   origin: ['https://subtle-sfogliatella-8570dc.netlify.app/', 'https://gold-win-oqm1.onrender.com'],
   methods: ['GET', 'POST']
 }));
-
 
 app.use(express.static('public'));
 
@@ -25,10 +27,24 @@ webpush.setVapidDetails(
   privateVapidKey
 );
 
-let subscriptions = []; // Масив для зберігання підписок
+// Шлях до файлу, в якому зберігаються підписки
+const subscribersFilePath = path.join(__dirname, 'subscribers.json');
 
-// Використовуємо body-parser для обробки JSON-запитів
-app.use(bodyParser.json());
+// Функція для читання підписок з файлу
+function readSubscribers() {
+  try {
+    const data = fs.readFileSync(subscribersFilePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    // Якщо файл не існує або є помилка при зчитуванні, повертаємо порожній масив
+    return [];
+  }
+}
+
+// Функція для збереження підписок у файл
+function saveSubscribers(subscribers) {
+  fs.writeFileSync(subscribersFilePath, JSON.stringify(subscribers, null, 2));
+}
 
 // Ендпоінт для підписки
 app.post('/subscribe', (req, res) => {
@@ -39,7 +55,22 @@ app.post('/subscribe', (req, res) => {
     return res.status(400).json({ error: 'Невірна підписка' });
   }
 
-  subscriptions.push(subscription); // Додаємо підписку в масив
+  // Зчитуємо підписки з файлу
+  let subscriptions = readSubscribers();
+
+  // Перевірка, чи вже є ця підписка
+  const isAlreadySubscribed = subscriptions.some(sub => sub.endpoint === subscription.endpoint);
+
+  if (isAlreadySubscribed) {
+    return res.status(200).json({ message: 'Цей пристрій вже підписаний.' });
+  }
+
+  // Додаємо підписку в масив
+  subscriptions.push(subscription);
+
+  // Зберігаємо оновлений масив підписок в файл
+  saveSubscribers(subscriptions);
+
   console.log('Нова підписка:', subscription);
 
   // Відповідаємо клієнту, що підписка успішно додана
@@ -56,6 +87,9 @@ app.post('/send', (req, res) => {
   }
 
   const payload = JSON.stringify({ title, message });
+
+  // Зчитуємо підписки з файлу
+  const subscriptions = readSubscribers();
 
   // Відправляємо повідомлення всім підписникам
   Promise.all(subscriptions.map(subscription =>
